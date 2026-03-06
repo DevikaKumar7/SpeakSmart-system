@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ obj }}{% endblock %}
+{% block page_title %}✏️ Dictation Detail{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'scheduling:dictation_edit' obj.pk %}" class="btn btn-warning btn-sm">✏️ Edit</a>
+<a href="{% url 'scheduling:dictation_toggle' obj.pk %}" class="btn btn-{%if obj.is_active%}warning{%else%}success{%endif%} btn-sm" onclick="return confirm('Toggle status?')">{%if obj.is_active%}🚫 Disable{%else%}✅ Enable{%endif%}</a>
+<a href="{% url 'scheduling:dictation_delete' obj.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Delete permanently?')">🗑 Delete</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3>{{ obj }}</h3>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="badge badge-secondary">{{ obj.difficulty }}</span>
+      <span class="badge badge-{%if obj.is_active%}success{%else%}danger{%endif%}">{%if obj.is_active%}Active{%else%}Disabled{%endif%}</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="detail-field"><label>Title</label><p>{{obj.title}}</p></div>
+<div class="detail-field"><label>Audio URL</label><p>{{obj.audio_url|default:'—'}}</p></div>
+<div class="detail-field" style="grid-column:1/-1"><label>Text</label><div class="long-text">{{obj.text}}</div></div>
+<div class="detail-field" style="grid-column:1/-1"><label>Notes</label><div class="long-text">{{obj.notes}}</div></div>
+
+      <div class="detail-field"><label>Created By</label><p>{{ obj.created_by.get_full_name|default:obj.created_by.username|default:"—" }}</p></div>
+      <div class="detail-field"><label>Created At</label><p>{{ obj.created_at|date:"M d, Y H:i" }}</p></div>
+    </div>
+  </div>
+</div>
+<a href="{% url 'scheduling:dictation_list' %}" class="btn btn-secondary">← Back to List</a>
+{% endblock %}

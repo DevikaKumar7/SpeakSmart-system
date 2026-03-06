@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}English Scheduling{% endblock %}
+{% block page_title %}English Scheduling Module{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px">
+
+  <!-- Reading -->
+  <div class="card">
+    <div class="card-header" style="background:#eff6ff;border-color:#bfdbfe"><h3>📖 Reading</h3></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <a href="{% url 'scheduling:phrase_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">💬 Phrases</div><div style="font-size:.8rem;color:#64748b">Common phrases & expressions</div></div>
+          <span class="badge badge-primary">{{ phrase_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:paragraph_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">📄 Paragraphs</div><div style="font-size:.8rem;color:#64748b">Reading passages</div></div>
+          <span class="badge badge-primary">{{ paragraph_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:vocabulary_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">🔤 Vocabulary</div><div style="font-size:.8rem;color:#64748b">Word definitions & usage</div></div>
+          <span class="badge badge-primary">{{ vocabulary_count }}</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Writing -->
+  <div class="card">
+    <div class="card-header" style="background:#f0fdf4;border-color:#bbf7d0"><h3>✍️ Writing</h3></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <a href="{% url 'scheduling:writing_prompt_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">💡 Prompts</div><div style="font-size:.8rem;color:#64748b">Writing topics & prompts</div></div>
+          <span class="badge badge-success">{{ writing_prompt_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:writing_exercise_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">📝 Exercises</div><div style="font-size:.8rem;color:#64748b">Essays, letters, emails</div></div>
+          <span class="badge badge-success">{{ writing_exercise_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:grammar_rule_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">📐 Grammar</div><div style="font-size:.8rem;color:#64748b">Rules & examples</div></div>
+          <span class="badge badge-success">{{ grammar_rule_count }}</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Listening -->
+  <div class="card">
+    <div class="card-header" style="background:#fef9c3;border-color:#fde68a"><h3>🎧 Listening</h3></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <a href="{% url 'scheduling:listening_track_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">🎵 Tracks</div><div style="font-size:.8rem;color:#64748b">Audio content</div></div>
+          <span class="badge badge-warning">{{ track_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:listening_exercise_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">❓ Exercises</div><div style="font-size:.8rem;color:#64748b">Comprehension questions</div></div>
+          <span class="badge badge-warning">{{ listening_exercise_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:dictation_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">✏️ Dictation</div><div style="font-size:.8rem;color:#64748b">Dictation practice</div></div>
+          <span class="badge badge-warning">{{ dictation_count }}</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Speaking -->
+  <div class="card">
+    <div class="card-header" style="background:#fdf4ff;border-color:#e9d5ff"><h3>🗣️ Speaking</h3></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+      <a href="{% url 'scheduling:speaking_topic_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">💭 Topics</div><div style="font-size:.8rem;color:#64748b">Discussion topics</div></div>
+          <span class="badge badge-purple">{{ speaking_topic_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:pronunciation_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">🔊 Pronunciation</div><div style="font-size:.8rem;color:#64748b">Phonetics & tips</div></div>
+          <span class="badge badge-purple">{{ pronunciation_count }}</span>
+        </div>
+      </a>
+      <a href="{% url 'scheduling:roleplay_list' %}" class="activity-card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-weight:600">🎭 Roleplay</div><div style="font-size:.8rem;color:#64748b">Scenarios & dialogues</div></div>
+          <span class="badge badge-purple">{{ roleplay_count }}</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

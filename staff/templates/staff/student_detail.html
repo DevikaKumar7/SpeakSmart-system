@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ student.get_full_name }}{% endblock %}
+{% block page_title %}{{ student.get_full_name }}{% endblock %}
+{% block breadcrumb %}Students → {{ student.get_full_name }}{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'staff:student_edit' student.pk %}" class="btn btn-warning btn-sm">✏️ Edit</a>
+<a href="{% url 'staff:student_toggle' student.pk %}" class="btn btn-{% if student.is_active %}danger{% else %}success{% endif %} btn-sm" onclick="return confirm('Toggle status?')">{% if student.is_active %}🚫 Disable{% else %}✅ Enable{% endif %}</a>
+{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3>👤 Student Profile</h3>
+        <span class="badge badge-{% if student.is_active %}success{% else %}danger{% endif %} ">{% if student.is_active %}Active{% else %}Inactive{% endif %}</span>
+    </div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div>
+                <div class="detail-field"><label>Student ID</label><p><span class="badge badge-secondary">{{ student.student_id }}</span></p></div>
+                <div class="detail-field"><label>Full Name</label><p>{{ student.get_full_name }}</p></div>
+                <div class="detail-field"><label>Email</label><p>{{ student.email }}</p></div>
+                <div class="detail-field"><label>Phone</label><p>{{ student.phone|default:"—" }}</p></div>
+            </div>
+            <div>
+                <div class="detail-field"><label>Batch</label><p>{% if student.batch %}<span class="badge badge-primary">{{ student.batch.name }}</span>{% else %}—{% endif %}</p></div>
+                <div class="detail-field"><label>Gender</label><p>{{ student.get_gender_display|default:"—" }}</p></div>
+                <div class="detail-field"><label>Date of Birth</label><p>{{ student.date_of_birth|default:"—" }}</p></div>
+                <div class="detail-field"><label>Enrolled Date</label><p>{{ student.enrolled_date }}</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+<a href="{% url 'staff:student_list' %}" class="btn btn-secondary">← Back to Students</a>
+{% endblock %}

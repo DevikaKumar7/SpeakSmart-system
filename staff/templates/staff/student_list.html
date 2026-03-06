@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Students{% endblock %}
+{% block topbar_actions %}<a href="{% url 'staff:student_create' %}" class="btn btn-primary">+ Add Student</a>{% endblock %}
+{% block content %}
+<div class="search-bar">
+    <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
+        <input name="search" value="{{ search }}" placeholder="🔍 Search by name or ID..." style="flex:1;min-width:200px">
+        <select name="batch">
+            <option value="">All Batches</option>
+            {% for b in batches %}<option value="{{ b.pk }}" {% if selected_batch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a href="{% url 'staff:student_list' %}" class="btn btn-secondary">Clear</a>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-body" style="padding:0">
+        <table>
+            <thead><tr><th>Student ID</th><th>Name</th><th>Batch</th><th>Email</th><th>Enrolled</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for s in students %}
+            <tr>
+                <td><span class="badge badge-secondary">{{ s.student_id }}</span></td>
+                <td><strong>{{ s.get_full_name }}</strong></td>
+                <td>{% if s.batch %}<span class="badge badge-primary">{{ s.batch.name }}</span>{% else %}—{% endif %}</td>
+                <td>{{ s.email }}</td>
+                <td>{{ s.enrolled_date }}</td>
+                <td><span class="badge badge-{% if s.is_active %}success{% else %}danger{% endif %}">{% if s.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                <td class="action-buttons">
+                    <a href="{% url 'staff:student_detail' s.pk %}" class="btn btn-secondary btn-sm">👁</a>
+                    <a href="{% url 'staff:student_edit' s.pk %}" class="btn btn-warning btn-sm">✏️</a>
+                    <a href="{% url 'staff:student_toggle' s.pk %}" class="btn btn-{% if s.is_active %}danger{% else %}success{% endif %} btn-sm" onclick="return confirm('Toggle student status?')">{% if s.is_active %}🚫{% else %}✅{% endif %}</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>No students found.<br><a href="{% url 'staff:student_create' %}">Add a student</a></p></div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

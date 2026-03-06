@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Writing Exercises{% endblock %}
+{% block page_title %}📝 Writing Exercises{% endblock %}
+{% block topbar_actions %}<a href="{% url 'scheduling:writing_exercise_create' %}" class="btn btn-primary">+ Add Writing Exercise</a>{% endblock %}
+{% block content %}
+<div class="search-bar">
+  <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
+    <input name="search" value="{{ search }}" placeholder="🔍 Search..." style="flex:1;min-width:200px">
+    <select name="difficulty">
+      <option value="">All Levels</option>
+      <option value="beginner" {%if difficulty == 'beginner'%}selected{%endif%}>Beginner</option>
+      <option value="intermediate" {%if difficulty == 'intermediate'%}selected{%endif%}>Intermediate</option>
+      <option value="advanced" {%if difficulty == 'advanced'%}selected{%endif%}>Advanced</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:.85rem"><input type="checkbox" name="show_all" {%if show_all%}checked{%endif%} value="1"> Show Disabled</label>
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a href="{% url 'scheduling:writing_exercise_create' %}" class="btn btn-secondary">Clear</a>
+  </form>
+</div>
+<div class="card">
+  <div class="card-body" style="padding:0">
+    <table>
+      <thead><tr><th>Title</th><th>Difficulty</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+      {%for item in items%}
+      <tr>
+        <td><a href="{% url 'scheduling:writing_exercise_detail' item.pk %}" style="font-weight:600;color:#2563eb;text-decoration:none">{{ item.title }}</a></td>
+        <td><span class="badge badge-secondary">{{ item.difficulty }}</span></td>
+        <td><span class="badge badge-{%if item.is_active%}success{%else%}danger{%endif%}">{%if item.is_active%}Active{%else%}Disabled{%endif%}</span></td>
+        <td style="color:#64748b;font-size:.8rem">{{ item.created_at|date:"M d, Y" }}</td>
+        <td class="action-buttons">
+          <a href="{% url 'scheduling:writing_exercise_detail' item.pk %}" class="btn btn-secondary btn-sm">👁</a>
+          <a href="{% url 'scheduling:writing_exercise_edit' item.pk %}" class="btn btn-warning btn-sm">✏️</a>
+          <a href="{% url 'scheduling:writing_exercise_toggle' item.pk %}" class="btn btn-{%if item.is_active%}warning{%else%}success{%endif%} btn-sm" onclick="return confirm('Toggle status?')">{%if item.is_active%}🚫{%else%}✅{%endif%}</a>
+          <a href="{% url 'scheduling:writing_exercise_delete' item.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Delete permanently?')">🗑</a>
+        </td>
+      </tr>
+      {%empty%}
+      <tr><td colspan="5"><div class="empty-state"><div class="icon">📝</div><p>No writing exercises yet.<br><a href="{% url 'scheduling:writing_exercise_create' %}">Add one now</a></p></div></td></tr>
+      {%endfor%}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

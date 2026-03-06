@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Student Portal{% endblock %}
+{% block page_title %}My Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3>🎓 Welcome, {{ student.get_full_name }}</h3></div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div>
+                <div class="detail-field"><label>Student ID</label><p>{{ student.student_id }}</p></div>
+                <div class="detail-field"><label>Email</label><p>{{ student.email }}</p></div>
+            </div>
+            <div>
+                <div class="detail-field"><label>Batch</label><p>{{ student.batch.name|default:"Not assigned" }}</p></div>
+                <div class="detail-field"><label>Enrolled</label><p>{{ student.enrolled_date }}</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 style="margin-bottom:16px">📚 Course Activities</h3>
+<div class="activity-grid">
+    <a href="{% url 'scheduling:phrase_list' %}" class="activity-card"><div class="ac-icon">📖</div><h4>Reading</h4><p>Phrases, paragraphs & vocabulary</p></a>
+    <a href="{% url 'scheduling:writing_prompt_list' %}" class="activity-card"><div class="ac-icon">✍️</div><h4>Writing</h4><p>Prompts, exercises & grammar</p></a>
+    <a href="{% url 'scheduling:listening_track_list' %}" class="activity-card"><div class="ac-icon">🎧</div><h4>Listening</h4><p>Tracks, exercises & dictation</p></a>
+    <a href="{% url 'scheduling:speaking_topic_list' %}" class="activity-card"><div class="ac-icon">🗣️</div><h4>Speaking</h4><p>Topics, pronunciation & roleplay</p></a>
+</div>
+{% endblock %}

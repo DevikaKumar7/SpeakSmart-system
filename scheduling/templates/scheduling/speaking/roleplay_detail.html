@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ obj.title }}{% endblock %}
+{% block page_title %}🎭 {{ obj.title }}{% endblock %}
+{% block topbar_actions %}<a href="{% url 'scheduling:roleplay_edit' obj.pk %}" class="btn btn-warning btn-sm">✏️ Edit</a><a href="{% url 'scheduling:roleplay_delete' obj.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Delete?')">🗑</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><h3>{{ obj.title }}<span style="margin-left:10px" class="badge badge-secondary">{{ obj.difficulty }}</span></h3></div>
+  <div class="card-body">
+    <div class="detail-field"><label>Scenario</label><div class="long-text">{{ obj.scenario }}</div></div>
+    {%if roles%}<div class="detail-field" style="margin-top:16px"><label>Roles</label><ul style="margin-left:20px;line-height:2">{%for r in roles%}<li>{{ r }}</li>{%endfor%}</ul></div>{%endif%}
+    {%if obj.objectives%}<div class="detail-field" style="margin-top:16px"><label>Objectives</label><div class="long-text">{{ obj.objectives }}</div></div>{%endif%}
+    {%if obj.sample_dialogue%}<div class="detail-field" style="margin-top:16px"><label>Sample Dialogue</label><div class="long-text">{{ obj.sample_dialogue }}</div></div>{%endif%}
+  </div>
+</div>
+<a href="{% url 'scheduling:roleplay_list' %}" class="btn btn-secondary">← Back</a>
+{% endblock %}

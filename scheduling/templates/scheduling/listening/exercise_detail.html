@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ obj.title }}{% endblock %}
+{% block page_title %}❓ {{ obj.title }}{% endblock %}
+{% block topbar_actions %}<a href="{% url 'scheduling:listening_exercise_edit' obj.pk %}" class="btn btn-warning btn-sm">✏️ Edit</a><a href="{% url 'scheduling:listening_exercise_delete' obj.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Delete?')">🗑</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><h3>{{ obj.title }}<span style="margin-left:10px" class="badge badge-secondary">{{ obj.difficulty }}</span></h3></div>
+  <div class="card-body">
+    <div class="detail-field"><label>Instructions</label><div class="long-text">{{ obj.instructions }}</div></div>
+    {%if questions%}<div class="detail-field" style="margin-top:16px"><label>Questions</label><ol style="margin-left:20px;line-height:2">{%for q in questions%}<li>{{ q }}</li>{%endfor%}</ol></div>{%endif%}
+    {%if obj.answer_key%}<div class="detail-field" style="margin-top:16px"><label>Answer Key</label><div class="long-text">{{ obj.answer_key }}</div></div>{%endif%}
+  </div>
+</div>
+<a href="{% url 'scheduling:listening_exercise_list' %}" class="btn btn-secondary">← Back</a>
+{% endblock %}

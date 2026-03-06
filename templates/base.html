@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}English Course System{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #2563eb; --primary-dark: #dfe9d8; --secondary: #7c3aed;
+            --success: #16a34a; --warning: #d97706; --danger: #dc2626;
+            --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0;
+            --text: #1e293b; --muted: #64748b; --sidebar-w: 260px;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-w); background: #207ebd; color: #cbd5e1; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 100; display: flex; flex-direction: column; }
+        .sidebar-logo { padding: 20px; background: #0f172a; border-bottom: 1px solid #334155; }
+        .sidebar-logo h2 { color: #60a5fa; font-size: 1.1rem; font-weight: 700; }
+        .sidebar-logo p { color: #94a3b8; font-size: 0.75rem; margin-top: 2px; }
+        .sidebar-section { padding: 8px 0; }
+        .sidebar-section-title { padding: 6px 16px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #475569; }
+        .sidebar a { display: flex; align-items: center; gap: 8px; padding: 8px 16px; color: #94a3b8; text-decoration: none; font-size: 0.85rem; transition: all 0.15s; border-left: 3px solid transparent; }
+        .sidebar a:hover, .sidebar a.active { color: #e2e8f0; background: #334155; border-left-color: #60a5fa; }
+        .sidebar a .icon { width: 18px; text-align: center; font-size: 1rem; }
+        .sidebar-sub { margin-left: 8px; }
+        .sidebar-sub a { padding: 5px 16px 5px 24px; font-size: 0.8rem; }
+        .sidebar-user { margin-top: auto; padding: 12px 16px; border-top: 1px solid #334155; background: #0f172a; }
+        .sidebar-user span { display: block; font-size: 0.85rem; color: #e2e8f0; font-weight: 600; }
+        .sidebar-user small { color: #64748b; font-size: 0.75rem; }
+        .sidebar-user a { padding: 6px 0; font-size: 0.78rem; color: #f87171; margin-top: 4px; border: none; background: none; }
+        .sidebar-user a:hover { color: #fca5a5; background: none; border-left-color: transparent; }
+
+        /* Main */
+        .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+        .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+        .topbar h1 { font-size: 1.2rem; font-weight: 700; color: var(--text); }
+        .topbar-breadcrumb { font-size: 0.8rem; color: var(--muted); }
+        .content { padding: 28px; flex: 1; }
+
+        /* Cards */
+        .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 20px; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-header h3 { font-size: 1rem; font-weight: 600; }
+        .card-body { padding: 20px; }
+
+        /* Stats grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--card); border-radius: 10px; border: 1px solid var(--border); padding: 16px; }
+        .stat-card .num { font-size: 2rem; font-weight: 700; color: var(--primary); line-height: 1; }
+        .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+        .stat-card .icon-big { font-size: 1.6rem; }
+
+        /* Activity grid */
+        .activity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+        .activity-card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 20px; text-decoration: none; color: var(--text); transition: all 0.2s; display: flex; flex-direction: column; gap: 8px; }
+        .activity-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: var(--primary); }
+        .activity-card .ac-icon { font-size: 2rem; }
+        .activity-card h4 { font-weight: 600; font-size: 1rem; }
+        .activity-card p { font-size: 0.8rem; color: var(--muted); }
+        .activity-card .ac-count { font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+
+        /* Table */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th { background: #d1dfec; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:hover td { background: #f8fafc; }
+
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 7px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: all 0.15s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-warning:hover { background: #b45309; }
+        .btn-secondary { background: #e2e8f0; color: var(--text); }
+        .btn-secondary:hover { background: #cbd5e1; }
+        .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+        .btn-outline { background: transparent; border: 1.5px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: white; }
+
+        /* Forms */
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 7px;
+            font-size: 0.9rem; font-family: inherit; outline: none; transition: border 0.15s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); }
+        .form-group .help { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        /* Badges */
+        .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+        .badge-success { background: #dcfce7; color: #15803d; }
+        .badge-danger { background: #fee2e2; color: #b91c1c; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-primary { background: #dbeafe; color: #1d4ed8; }
+        .badge-secondary { background: #f1f5f9; color: #475569; }
+        .badge-purple { background: #ede9fe; color: #6d28d9; }
+
+        /* Alerts */
+        .messages { padding: 0 0 16px; }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 0.875rem; margin-bottom: 8px; }
+        .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+        /* Detail sections */
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .detail-field { margin-bottom: 16px; }
+        .detail-field label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+        .detail-field p { font-size: 0.9rem; color: var(--text); }
+        .detail-field .long-text { background: #f8fafc; border: 1px solid var(--border); border-radius: 7px; padding: 12px; font-size: 0.875rem; line-height: 1.6; white-space: pre-wrap; }
+
+        /* Search bar */
+        .search-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .search-bar input, .search-bar select { padding: 8px 13px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 0.875rem; }
+        .search-bar input:focus, .search-bar select:focus { outline: none; border-color: var(--primary); }
+
+        /* Section header */
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .section-header h2 { font-size: 1.2rem; font-weight: 700; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+        .empty-state p { font-size: 0.9rem; }
+
+        /* Login page */
+        .login-page { background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-card .logo { text-align: center; margin-bottom: 28px; }
+        .login-card .logo h1 { font-size: 1.5rem; color: var(--primary); }
+        .login-card .logo p { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+
+        /* Confirm delete */
+        .confirm-box { max-width: 500px; margin: 60px auto; }
+
+        /* Tags */
+        .tag { display: inline-block; padding: 2px 8px; background: #f1f5f9; border-radius: 5px; font-size: 0.75rem; color: var(--muted); margin: 2px; }
+
+        /* Action buttons row */
+        .action-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .text-muted { color: var(--muted); }
+        .mt-2 { margin-top: 8px; }
+        .mb-0 { margin-bottom: 0; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <h2>📚 SpeakSmart</h2>
+        <p>English Course System</p>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Main</div>
+        <a href="{% url 'staff:dashboard' %}"><span class="icon">🏠</span> Dashboard</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Staff Module</div>
+        <a href="{% url 'staff:batch_list' %}"><span class="icon">📦</span> Batches</a>
+        <a href="{% url 'staff:student_list' %}"><span class="icon">👥</span> Students</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">English Scheduling</div>
+        <a href="{% url 'scheduling:dashboard' %}"><span class="icon">📅</span> Schedule Home</a>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">📖 Reading</div>
+        <div class="sidebar-sub">
+            <a href="{% url 'scheduling:phrase_list' %}"><span class="icon">💬</span> Phrases</a>
+            <a href="{% url 'scheduling:paragraph_list' %}"><span class="icon">📄</span> Paragraphs</a>
+            <a href="{% url 'scheduling:vocabulary_list' %}"><span class="icon">🔤</span> Vocabulary</a>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">✍️ Writing</div>
+        <div class="sidebar-sub">
+            <a href="{% url 'scheduling:writing_prompt_list' %}"><span class="icon">💡</span> Prompts</a>
+            <a href="{% url 'scheduling:writing_exercise_list' %}"><span class="icon">📝</span> Exercises</a>
+            <a href="{% url 'scheduling:grammar_rule_list' %}"><span class="icon">📐</span> Grammar</a>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">🎧 Listening</div>
+        <div class="sidebar-sub">
+            <a href="{% url 'scheduling:listening_track_list' %}"><span class="icon">🎵</span> Tracks</a>
+            <a href="{% url 'scheduling:listening_exercise_list' %}"><span class="icon">❓</span> Exercises</a>
+            <a href="{% url 'scheduling:dictation_list' %}"><span class="icon">✏️</span> Dictation</a>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">🗣️ Speaking</div>
+        <div class="sidebar-sub">
+            <a href="{% url 'scheduling:speaking_topic_list' %}"><span class="icon">💭</span> Topics</a>
+            <a href="{% url 'scheduling:pronunciation_list' %}"><span class="icon">🔊</span> Pronunciation</a>
+            <a href="{% url 'scheduling:roleplay_list' %}"><span class="icon">🎭</span> Roleplay</a>
+        </div>
+    </div>
+
+    <div class="sidebar-user">
+        <span>{{ user.get_full_name|default:user.username }}</span>
+        <small>{% if user.is_staff %}Staff{% else %}Student{% endif %}</small>
+        <a href="{% url 'staff:logout' %}">⏏ Logout</a>
+    </div>
+</nav>
+{% endif %}
+
+<div class="main">
+    {% if user.is_authenticated %}
+    <div class="topbar">
+        <div>
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <div class="topbar-breadcrumb">{% block breadcrumb %}Home{% endblock %}</div>
+        </div>
+        <div>{% block topbar_actions %}{% endblock %}</div>
+    </div>
+    {% endif %}
+
+    <div class="content">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+</body>
+</html>

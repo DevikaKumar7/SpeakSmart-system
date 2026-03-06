@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ role }} Login - EduCourse</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1e293b 0%,#2563eb 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.card{background:white;border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.logo{text-align:center;margin-bottom:28px}
+.logo .emoji{font-size:2.5rem;display:block;margin-bottom:8px}
+.logo h1{font-size:1.6rem;color:#2563eb;font-weight:700}
+.logo p{color:#64748b;font-size:.875rem;margin-top:4px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.85rem;font-weight:600;color:#1e293b;margin-bottom:6px}
+.form-group input{width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.95rem;outline:none;transition:border .15s}
+.form-group input:focus{border-color:#2563eb}
+.btn{width:100%;padding:12px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:background .15s}
+.btn:hover{background:#1d4ed8}
+.alert{padding:10px 14px;border-radius:7px;font-size:.85rem;margin-bottom:14px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.links{text-align:center;margin-top:18px;font-size:.85rem;color:#64748b}
+.links a{color:#2563eb;text-decoration:none;font-weight:500}
+.links a:hover{text-decoration:underline}
+.divider{text-align:center;color:#94a3b8;font-size:.8rem;margin:14px 0;position:relative}
+.divider:before{content:'';position:absolute;top:50%;left:0;right:0;border-top:1px solid #e2e8f0}
+.divider span{background:white;padding:0 10px;position:relative}
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">
+        <span class="emoji">{% if role == 'Staff' %}👨‍🏫{% else %}🎓{% endif %}</span>
+        <h1>EduCourse</h1>
+        <p>{{ role }} Login</p>
+    </div>
+    {% if messages %}{% for m in messages %}<div class="alert">{{ m }}</div>{% endfor %}{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Enter username" required autofocus>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn">🔐 Login as {{ role }}</button>
+    </form>
+    <div class="links" style="margin-top:14px">
+        {% if role == 'Staff' %}
+            <a href="{% url 'staff:register' %}">Register as Staff</a>
+            <span style="margin:0 8px">•</span>
+            <a href="{% url 'staff:student_login' %}">Student Login</a>
+        {% else %}
+            <a href="{% url 'staff:login' %}">← Staff Login</a>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

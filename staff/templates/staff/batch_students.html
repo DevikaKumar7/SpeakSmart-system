@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ batch.name }} - Students{% endblock %}
+{% block page_title %}{{ batch.name }}{% endblock %}
+{% block breadcrumb %}Batches → {{ batch.name }}{% endblock %}
+{% block topbar_actions %}<a href="{% url 'staff:student_create' %}?batch={{ batch.pk }}" class="btn btn-primary">+ Add Student to Batch</a>{% endblock %}
+{% block content %}
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div class="stat-card" style="min-width:140px"><div class="num">{{ students.count }}</div><div class="label">Total Students</div></div>
+    <div class="stat-card" style="min-width:140px"><div class="num">{{ batch.start_date }}</div><div class="label">Start Date</div></div>
+</div>
+<div class="card">
+    <div class="card-header"><h3>👥 Students in {{ batch.name }}</h3></div>
+    <div class="card-body" style="padding:0">
+        <table>
+            <thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for s in students %}
+            <tr>
+                <td><span class="badge badge-secondary">{{ s.student_id }}</span></td>
+                <td><strong>{{ s.get_full_name }}</strong></td>
+                <td>{{ s.email }}</td>
+                <td>{{ s.phone|default:"—" }}</td>
+                <td><span class="badge badge-{% if s.is_active %}success{% else %}danger{% endif %}">{% if s.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                <td class="action-buttons">
+                    <a href="{% url 'staff:student_detail' s.pk %}" class="btn btn-secondary btn-sm">👁 View</a>
+                    <a href="{% url 'staff:student_edit' s.pk %}" class="btn btn-warning btn-sm">✏️</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6"><div class="empty-state"><div class="icon">👤</div><p>No students in this batch yet.<br><a href="{% url 'staff:student_create' %}?batch={{ batch.pk }}">Add a student</a></p></div></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div style="margin-top:12px"><a href="{% url 'staff:batch_list' %}" class="btn btn-secondary">← Back to Batches</a></div>
+{% endblock %}
