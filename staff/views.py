@@ -4,7 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
 from .models import StaffProfile, Student, Batch
-from .forms import StaffRegistrationForm, StudentForm, BatchForm
+from .forms import StaffRegistrationForm, StudentForm, BatchForm, ClassSchedule
+from django.db.models import Q
+from datetime import date
 
 
 def staff_login(request):
@@ -35,6 +37,49 @@ def student_login(request):
         else:
             messages.error(request, 'Invalid credentials or not a student.')
     return render(request, 'staff/login.html', {'role': 'Student'})
+
+@login_required
+def student_dashboard(request):
+    """Full student dashboard with content counts and pending tasks."""
+    if request.user.is_staff:
+        return redirect('staff:dashboard')
+
+    student = get_object_or_404(Student, user=request.user)
+
+    # Content counts for the 4 skill cards
+    content_counts = {
+        'phrases':     Phrase.objects.filter(is_active=True).count(),
+        'paragraphs':  Paragraph.objects.filter(is_active=True).count(),
+        'vocabulary':  Vocabulary.objects.filter(is_active=True).count(),
+        'prompts':     WritingPrompt.objects.filter(is_active=True).count(),
+        'exercises':   WritingExercise.objects.filter(is_active=True).count(),
+        'grammar':     GrammarRule.objects.filter(is_active=True).count(),
+        'tracks':      ListeningTrack.objects.filter(is_active=True).count(),
+        'dictations':  Dictation.objects.filter(is_active=True).count(),
+        'topics':      SpeakingTopic.objects.filter(is_active=True).count(),
+        'roleplay':    Roleplay.objects.filter(is_active=True).count(),
+    }
+
+    # Tasks for this student's batch
+    assigned_tasks = TaskAssignment.objects.filter(
+        batch=student.batch, is_active=True
+    ).order_by('due_date') if student.batch else TaskAssignment.objects.none()
+
+    submitted_ids = TaskSubmission.objects.filter(
+        student=student
+    ).values_list('task_id', flat=True)
+
+    pending_tasks = assigned_tasks.exclude(id__in=submitted_ids)
+    completed_tasks = assigned_tasks.filter(id__in=submitted_ids)
+
+    return render(request, 'staff/student_dashboard.html', {
+        'student':         student,
+        'content_counts':  content_counts,
+        'pending_tasks':   pending_tasks,
+        'completed_tasks': completed_tasks,
+        'total_assigned':  assigned_tasks.count(),
+        'submitted_count': completed_tasks.count(),
+    })
 
 
 def staff_logout(request):
@@ -67,6 +112,47 @@ def dashboard(request):
         'total_batches': total_batches,
         'recent_students': recent_students,
         'batches': batches,
+    })
+
+@login_required
+def schedule_list(request):
+    """List all class schedules with filters."""
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+
+    batch_id   = request.GET.get('batch', '')
+    status_f   = request.GET.get('status', '')
+    subject_f  = request.GET.get('subject', '')
+    date_f     = request.GET.get('date', '')
+    search     = request.GET.get('search', '')
+
+    schedules = ClassSchedule.objects.select_related('batch', 'created_by').all()
+
+    if batch_id:
+        schedules = schedules.filter(batch_id=batch_id)
+    if status_f:
+        schedules = schedules.filter(status=status_f)
+    if subject_f:
+        schedules = schedules.filter(subject=subject_f)
+    if date_f:
+        schedules = schedules.filter(date=date_f)
+    if search:
+        schedules = schedules.filter(
+            Q(title__icontains=search) | Q(venue__icontains=search)
+        )
+
+    batches = Batch.objects.filter(is_active=True)
+    return render(request, 'staff/schedule_list.html', {
+        'schedules':   schedules,
+        'batches':     batches,
+        'batch_id':    batch_id,
+        'status_f':    status_f,
+        'subject_f':   subject_f,
+        'date_f':      date_f,
+        'search':      search,
+        'today':       date.today(),
+        'status_choices':  ClassSchedule.STATUS_CHOICES,
+        'subject_choices': ClassSchedule.SUBJECT_CHOICES,
     })
 
 
