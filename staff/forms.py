@@ -5,23 +5,23 @@ from .models import StaffProfile, Student, Batch, ClassSchedule
 
 
 class StaffRegistrationForm(UserCreationForm):
-    first_name = forms.CharField(max_length=100, required=True)
-    last_name = forms.CharField(max_length=100, required=True)
-    email = forms.EmailField(required=True)
+    first_name  = forms.CharField(max_length=100, required=True)
+    last_name   = forms.CharField(max_length=100, required=True)
+    email       = forms.EmailField(required=True)
     employee_id = forms.CharField(max_length=20, required=True)
-    phone = forms.CharField(max_length=15, required=False)
-    department = forms.CharField(max_length=100, required=False)
+    phone       = forms.CharField(max_length=15, required=False)
+    department  = forms.CharField(max_length=100, required=False)
 
     class Meta:
-        model = User
+        model  = User
         fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.first_name = self.cleaned_data['first_name']
-        user.last_name = self.cleaned_data['last_name']
-        user.email = self.cleaned_data['email']
-        user.is_staff = True
+        user.last_name  = self.cleaned_data['last_name']
+        user.email      = self.cleaned_data['email']
+        user.is_staff   = True
         if commit:
             user.save()
             StaffProfile.objects.create(
@@ -34,11 +34,14 @@ class StaffRegistrationForm(UserCreationForm):
 
 
 class StudentForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, required=False,
-                                help_text="Leave blank to auto-generate")
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        required=False,
+        help_text="Leave blank to auto-generate"
+    )
 
     class Meta:
-        model = Student
+        model  = Student
         fields = ['student_id', 'first_name', 'last_name', 'email', 'phone',
                   'gender', 'date_of_birth', 'batch']
         widgets = {
@@ -48,12 +51,13 @@ class StudentForm(forms.ModelForm):
 
 class BatchForm(forms.ModelForm):
     class Meta:
-        model = Batch
+        model  = Batch
         fields = ['name', 'description', 'start_date', 'end_date']
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date':   forms.DateInput(attrs={'type': 'date'}),
         }
+
 
 # ─── CLASS TIME SCHEDULE FORM ─────────────────────────────────────────────────
 
@@ -81,4 +85,4 @@ class ClassScheduleForm(forms.ModelForm):
         end   = cleaned.get('end_time')
         if start and end and end <= start:
             raise forms.ValidationError("End time must be after start time.")
-        return cleaned        
+        return cleaned

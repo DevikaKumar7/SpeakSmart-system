@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Weekly Timetable{% endblock %}
+{% block page_title %}Weekly Timetable{% endblock %}
+{% block breadcrumb %}Staff › Class Schedules › Timetable{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'staff:schedule_list' %}" class="btn btn-secondary btn-sm">📋 List View</a>
+<a href="{% url 'staff:schedule_create' %}" class="btn btn-primary btn-sm" style="margin-left:8px">+ Schedule Class</a>
+{% endblock %}
+
+{% block content %}
+<style>
+  /* Filter bar */
+  .tt-filter { background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+    padding:14px 20px; margin-bottom:22px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .tt-filter label { font-size:.75rem; font-weight:700; color:#64748b; text-transform:uppercase; }
+  .tt-filter select { padding:7px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.85rem; outline:none; }
+  .tt-filter select:focus { border-color:#2563eb; }
+
+  /* Timetable grid */
+  .tt-grid { display:grid; grid-template-columns:110px repeat(7, 1fr); gap:0; border-radius:12px;
+    overflow:hidden; border:1px solid #e2e8f0; background:#fff; }
+
+  /* Header row */
+  .tt-head { background:#1e3a5f; color:#fff; padding:14px 10px; text-align:center;
+    font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .tt-head.corner { background:#0f172a; }
+  .tt-head.today-col { background:#2563eb; }
+
+  /* Day column */
+  .tt-day-col { border-right:1px solid #e2e8f0; min-height:120px; padding:8px 6px;
+    display:flex; flex-direction:column; gap:6px; vertical-align:top; }
+  .tt-day-col.today-col { background:#eff6ff; }
+
+  /* Session card inside timetable */
+  .sess-card {
+    border-radius:8px; padding:8px 10px;
+    font-size:.75rem; line-height:1.4;
+    border-left:4px solid transparent;
+  }
+  .sess-reading   { background:#dbeafe; border-color:#2563eb; color:#1d4ed8; }
+  .sess-writing   { background:#ede9fe; border-color:#7c3aed; color:#6d28d9; }
+  .sess-listening { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
+  .sess-speaking  { background:#d1fae5; border-color:#10b981; color:#065f46; }
+  .sess-general   { background:#f1f5f9; border-color:#64748b; color:#334155; }
+
+  .sess-card .s-title { font-weight:700; margin-bottom:2px; }
+  .sess-card .s-time  { font-size:.7rem; opacity:.85; }
+  .sess-card .s-batch { font-size:.68rem; opacity:.75; margin-top:2px; }
+  .sess-card a { color:inherit; text-decoration:none; }
+  .sess-card a:hover .s-title { text-decoration:underline; }
+
+  .empty-day { color:#cbd5e1; font-size:.75rem; text-align:center; padding:20px 4px; }
+
+  /* Legend */
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:.78rem; color:#475569; }
+  .legend-dot { width:12px; height:12px; border-radius:3px; }
+  .ld-reading   { background:#2563eb; }
+  .ld-writing   { background:#7c3aed; }
+  .ld-listening { background:#f59e0b; }
+  .ld-speaking  { background:#10b981; }
+  .ld-general   { background:#64748b; }
+</style>
+
+<!-- Filter -->
+<form method="get">
+  <div class="tt-filter">
+    <label>Filter by Batch:</label>
+    <select name="batch" onchange="this.form.submit()">
+      <option value="">All Batches</option>
+      {% for b in batches %}
+      <option value="{{ b.id }}" {% if batch_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    {% if batch_id %}
+    <a href="{% url 'staff:schedule_timetable' %}" class="btn btn-secondary btn-sm">✕ Clear</a>
+    {% endif %}
+    <span style="font-size:.8rem;color:#94a3b8;margin-left:auto">Showing scheduled & ongoing classes</span>
+  </div>
+</form>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot ld-reading"></div>Reading</div>
+  <div class="legend-item"><div class="legend-dot ld-writing"></div>Writing</div>
+  <div class="legend-item"><div class="legend-dot ld-listening"></div>Listening</div>
+  <div class="legend-item"><div class="legend-dot ld-speaking"></div>Speaking</div>
+  <div class="legend-item"><div class="legend-dot ld-general"></div>General English</div>
+</div>
+
+<!-- Timetable Grid -->
+{% now "l" as current_day %}
+<div class="tt-grid">
+  <!-- Header -->
+  <div class="tt-head corner">Day / Time</div>
+  {% for day in days %}
+  <div class="tt-head {% if day == current_day %}today-col{% endif %}">
+    {{ day }}
+    {% if day == current_day %}<div style="font-size:.65rem;opacity:.7;margin-top:2px">Today</div>{% endif %}
+  </div>
+  {% endfor %}
+
+  <!-- Content row -->
+  <div class="tt-head" style="background:#f8fafc;color:#64748b;font-size:.72rem;align-self:stretch;display:flex;align-items:center;justify-content:center">
+    Classes
+  </div>
+  {% for day in days %}
+  <div class="tt-day-col {% if day == current_day %}today-col{% endif %}">
+    {% with sessions=timetable|default_if_none:"" %}
+    {% for s in timetable|dictsort:"start_time" %}
+    {% endfor %}
+    {% endwith %}
+
+    {% if timetable %}
+      {% with day_sessions=timetable|default:"" %}
+        {# Django template trick: iterate the timetable dict #}
+      {% endwith %}
+    {% endif %}
+
+    <!-- Per-day sessions injected via template tag below -->
+    {% for day_name, sessions in timetable.items %}
+      {% if day_name == day %}
+        {% if sessions %}
+          {% for s in sessions %}
+          <div class="sess-card sess-{{ s.subject }}">
+            <a href="{% url 'staff:schedule_detail' s.pk %}">
+              <div class="s-title">{{ s.title|truncatechars:28 }}</div>
+            </a>
+            <div class="s-time">{{ s.start_time|time:"H:i" }} – {{ s.end_time|time:"H:i" }}</div>
+            <div class="s-batch">📦 {{ s.batch.name }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-day">—</div>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- No data notice -->
+{% with total=0 %}
+{% for day, sessions in timetable.items %}
+{% if sessions %}
+{% endif %}
+{% endfor %}
+{% endwith %}
+
+<div style="margin-top:16px;font-size:.8rem;color:#94a3b8;text-align:center">
+  Timetable shows <strong>Scheduled</strong> and <strong>Ongoing</strong> classes only.
+  <a href="{% url 'staff:schedule_list' %}" style="color:#2563eb">View all schedules →</a>
+</div>
+{% endblock %}

@@ -4,8 +4,8 @@
 {% block breadcrumb %}Staff › Class Schedules{% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'staff:schedule_list' %}" class="btn btn-secondary btn-sm">📅 Timetable View</a>
-
+<a href="{% url 'staff:schedule_timetable' %}" class="btn btn-secondary btn-sm">📅 Timetable View</a>
+<a href="{% url 'staff:schedule_create' %}" class="btn btn-primary btn-sm" style="margin-left:8px">+ Schedule Class</a>
 {% endblock %}
 
 {% block content %}
@@ -104,7 +104,7 @@
 <div class="card">
   <div class="card-header">
     <h3>📋 All Schedules</h3>
-    <a href="{% url 'staff:schedule_list' %}" class="btn btn-primary btn-sm">+ Add New</a>
+    <a href="{% url 'staff:schedule_create' %}" class="btn btn-primary btn-sm">+ Add New</a>
   </div>
   <div class="card-body" style="padding:0">
     <div class="table-wrap">
@@ -173,7 +173,7 @@
             <td colspan="9">
               <div class="empty-state">
                 <div class="icon">📅</div>
-                <p>No class schedules found. <a href="{% url 'staff:schedule_list' %}" style="color:#2563eb">Create one now →</a></p>
+                <p>No class schedules found. <a href="{% url 'staff:schedule_create' %}" style="color:#2563eb">Create one now →</a></p>
               </div>
             </td>
           </tr>

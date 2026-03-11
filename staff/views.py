@@ -3,83 +3,41 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .models import StaffProfile, Student, Batch
-from .forms import StaffRegistrationForm, StudentForm, BatchForm, ClassSchedule
 from django.db.models import Q
 from datetime import date
 
+from .models import StaffProfile, Student, Batch, ClassSchedule
+from .forms import StaffRegistrationForm, StudentForm, BatchForm, ClassScheduleForm
+
+
+# ─── AUTH ─────────────────────────────────────────────────────────────────────
 
 def staff_login(request):
     if request.user.is_authenticated:
-        return redirect('staff:dashboard')
+        return redirect('staff:dashboard') if request.user.is_staff else redirect('staff:student_portal')
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request,
+                            username=request.POST.get('username'),
+                            password=request.POST.get('password'))
         if user and user.is_staff:
             login(request, user)
             return redirect('staff:dashboard')
-        else:
-            messages.error(request, 'Invalid credentials or not a staff member.')
+        messages.error(request, 'Invalid credentials or not a staff member.')
     return render(request, 'staff/login.html', {'role': 'Staff'})
 
 
 def student_login(request):
     if request.user.is_authenticated:
-        return redirect('staff:student_portal')
+        return redirect('staff:dashboard') if request.user.is_staff else redirect('staff:student_portal')
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request,
+                            username=request.POST.get('username'),
+                            password=request.POST.get('password'))
         if user and hasattr(user, 'student_profile'):
             login(request, user)
             return redirect('staff:student_portal')
-        else:
-            messages.error(request, 'Invalid credentials or not a student.')
+        messages.error(request, 'Invalid credentials or not a student.')
     return render(request, 'staff/login.html', {'role': 'Student'})
-
-@login_required
-def student_dashboard(request):
-    """Full student dashboard with content counts and pending tasks."""
-    if request.user.is_staff:
-        return redirect('staff:dashboard')
-
-    student = get_object_or_404(Student, user=request.user)
-
-    # Content counts for the 4 skill cards
-    content_counts = {
-        'phrases':     Phrase.objects.filter(is_active=True).count(),
-        'paragraphs':  Paragraph.objects.filter(is_active=True).count(),
-        'vocabulary':  Vocabulary.objects.filter(is_active=True).count(),
-        'prompts':     WritingPrompt.objects.filter(is_active=True).count(),
-        'exercises':   WritingExercise.objects.filter(is_active=True).count(),
-        'grammar':     GrammarRule.objects.filter(is_active=True).count(),
-        'tracks':      ListeningTrack.objects.filter(is_active=True).count(),
-        'dictations':  Dictation.objects.filter(is_active=True).count(),
-        'topics':      SpeakingTopic.objects.filter(is_active=True).count(),
-        'roleplay':    Roleplay.objects.filter(is_active=True).count(),
-    }
-
-    # Tasks for this student's batch
-    assigned_tasks = TaskAssignment.objects.filter(
-        batch=student.batch, is_active=True
-    ).order_by('due_date') if student.batch else TaskAssignment.objects.none()
-
-    submitted_ids = TaskSubmission.objects.filter(
-        student=student
-    ).values_list('task_id', flat=True)
-
-    pending_tasks = assigned_tasks.exclude(id__in=submitted_ids)
-    completed_tasks = assigned_tasks.filter(id__in=submitted_ids)
-
-    return render(request, 'staff/student_dashboard.html', {
-        'student':         student,
-        'content_counts':  content_counts,
-        'pending_tasks':   pending_tasks,
-        'completed_tasks': completed_tasks,
-        'total_assigned':  assigned_tasks.count(),
-        'submitted_count': completed_tasks.count(),
-    })
 
 
 def staff_logout(request):
@@ -99,20 +57,159 @@ def staff_register(request):
     return render(request, 'staff/register.html', {'form': form})
 
 
+# ─── STAFF DASHBOARD ──────────────────────────────────────────────────────────
+
 @login_required
 def dashboard(request):
     if not request.user.is_staff:
         return redirect('staff:student_portal')
+    today          = date.today()
     total_students = Student.objects.filter(is_active=True).count()
-    total_batches = Batch.objects.filter(is_active=True).count()
+    total_batches  = Batch.objects.filter(is_active=True).count()
     recent_students = Student.objects.order_by('-enrolled_date')[:5]
-    batches = Batch.objects.filter(is_active=True)
+    batches         = Batch.objects.filter(is_active=True)
+    today_classes   = ClassSchedule.objects.filter(date=today).select_related('batch').order_by('start_time')
+    upcoming        = ClassSchedule.objects.filter(date__gt=today, status='scheduled') \
+                                           .select_related('batch').order_by('date', 'start_time')[:5]
     return render(request, 'staff/dashboard.html', {
-        'total_students': total_students,
-        'total_batches': total_batches,
+        'total_students':  total_students,
+        'total_batches':   total_batches,
         'recent_students': recent_students,
-        'batches': batches,
+        'batches':         batches,
+        'today_classes':   today_classes,
+        'upcoming_classes': upcoming,
+        'today':           today,
     })
+
+
+# ─── STUDENT PORTAL ───────────────────────────────────────────────────────────
+
+@login_required
+def student_portal(request):
+    if request.user.is_staff:
+        return redirect('staff:dashboard')
+    student = get_object_or_404(Student, user=request.user)
+    return render(request, 'staff/student_portal.html', {'student': student})
+
+
+# ─── BATCH ────────────────────────────────────────────────────────────────────
+
+@login_required
+def batch_list(request):
+    batches = Batch.objects.all().order_by('-created_at')
+    return render(request, 'staff/batch_list.html', {'batches': batches})
+
+
+@login_required
+def batch_create(request):
+    if request.method == 'POST':
+        form = BatchForm(request.POST)
+        if form.is_valid():
+            batch = form.save(commit=False)
+            batch.created_by = request.user
+            batch.save()
+            messages.success(request, f'Batch "{batch.name}" created successfully!')
+            return redirect('staff:batch_list')
+    else:
+        form = BatchForm()
+    return render(request, 'staff/batch_form.html', {'form': form, 'title': 'Create Batch'})
+
+
+@login_required
+def batch_edit(request, pk):
+    batch = get_object_or_404(Batch, pk=pk)
+    if request.method == 'POST':
+        form = BatchForm(request.POST, instance=batch)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Batch updated successfully!')
+            return redirect('staff:batch_list')
+    else:
+        form = BatchForm(instance=batch)
+    return render(request, 'staff/batch_form.html', {'form': form, 'title': 'Edit Batch'})
+
+
+@login_required
+def batch_students(request, pk):
+    batch    = get_object_or_404(Batch, pk=pk)
+    students = Student.objects.filter(batch=batch).order_by('first_name')
+    return render(request, 'staff/batch_students.html', {'batch': batch, 'students': students})
+
+
+# ─── STUDENT ──────────────────────────────────────────────────────────────────
+
+@login_required
+def student_list(request):
+    batch_id = request.GET.get('batch')
+    search   = request.GET.get('search', '')
+    students = Student.objects.select_related('batch').all()
+    if batch_id:
+        students = students.filter(batch_id=batch_id)
+    if search:
+        students = (students.filter(first_name__icontains=search) |
+                    students.filter(last_name__icontains=search)   |
+                    students.filter(student_id__icontains=search))
+    batches = Batch.objects.filter(is_active=True)
+    return render(request, 'staff/student_list.html', {
+        'students':       students.order_by('batch__name', 'first_name'),
+        'batches':        batches,
+        'selected_batch': batch_id,
+        'search':         search,
+    })
+
+
+@login_required
+def student_create(request):
+    batch_id = request.GET.get('batch')
+    if request.method == 'POST':
+        form = StudentForm(request.POST)
+        if form.is_valid():
+            student  = form.save(commit=False)
+            username = student.email.split('@')[0]
+            password = form.cleaned_data.get('password') or User.objects.make_random_password()
+            user = User.objects.create_user(
+                username=username, email=student.email, password=password,
+                first_name=student.first_name, last_name=student.last_name,
+            )
+            student.user = user
+            student.save()
+            messages.success(request, f'Student "{student.get_full_name()}" added! Login: {username}')
+            return redirect('staff:student_list')
+    else:
+        form = StudentForm(initial={'batch': batch_id} if batch_id else {})
+    return render(request, 'staff/student_form.html', {'form': form, 'title': 'Add Student'})
+
+
+@login_required
+def student_detail(request, pk):
+    return render(request, 'staff/student_detail.html',
+                  {'student': get_object_or_404(Student, pk=pk)})
+
+
+@login_required
+def student_edit(request, pk):
+    student = get_object_or_404(Student, pk=pk)
+    if request.method == 'POST':
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Student updated successfully!')
+            return redirect('staff:student_list')
+    else:
+        form = StudentForm(instance=student)
+    return render(request, 'staff/student_form.html', {'form': form, 'title': 'Edit Student'})
+
+
+@login_required
+def student_toggle(request, pk):
+    student = get_object_or_404(Student, pk=pk)
+    student.is_active = not student.is_active
+    student.save()
+    messages.success(request, f'Student {"activated" if student.is_active else "deactivated"} successfully!')
+    return redirect('staff:student_list')
+
+
+# ─── CLASS TIME SCHEDULING ────────────────────────────────────────────────────
 
 @login_required
 def schedule_list(request):
@@ -157,129 +254,110 @@ def schedule_list(request):
 
 
 @login_required
-def student_portal(request):
-    if request.user.is_staff:
-        return redirect('staff:dashboard')
-    student = get_object_or_404(Student, user=request.user)
-    return render(request, 'staff/student_portal.html', {'student': student})
-
-
-@login_required
-def batch_list(request):
-    batches = Batch.objects.all().order_by('-created_at')
-    return render(request, 'staff/batch_list.html', {'batches': batches})
-
-
-@login_required
-def batch_create(request):
+def schedule_create(request):
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
     if request.method == 'POST':
-        form = BatchForm(request.POST)
+        form = ClassScheduleForm(request.POST)
         if form.is_valid():
-            batch = form.save(commit=False)
-            batch.created_by = request.user
-            batch.save()
-            messages.success(request, f'Batch "{batch.name}" created successfully!')
-            return redirect('staff:batch_list')
+            schedule = form.save(commit=False)
+            schedule.created_by = request.user
+            schedule.save()
+            messages.success(request, f'Class "{schedule.title}" scheduled successfully!')
+            return redirect('staff:schedule_list')
     else:
-        form = BatchForm()
-    return render(request, 'staff/batch_form.html', {'form': form, 'title': 'Create Batch'})
-
-
-@login_required
-def batch_edit(request, pk):
-    batch = get_object_or_404(Batch, pk=pk)
-    if request.method == 'POST':
-        form = BatchForm(request.POST, instance=batch)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Batch updated successfully!')
-            return redirect('staff:batch_list')
-    else:
-        form = BatchForm(instance=batch)
-    return render(request, 'staff/batch_form.html', {'form': form, 'title': 'Edit Batch'})
-
-
-@login_required
-def student_list(request):
-    batch_id = request.GET.get('batch')
-    search = request.GET.get('search', '')
-    students = Student.objects.select_related('batch').all()
-    if batch_id:
-        students = students.filter(batch_id=batch_id)
-    if search:
-        students = students.filter(
-            first_name__icontains=search
-        ) | students.filter(last_name__icontains=search) | students.filter(student_id__icontains=search)
-    batches = Batch.objects.filter(is_active=True)
-    return render(request, 'staff/student_list.html', {
-        'students': students.order_by('batch__name', 'first_name'),
-        'batches': batches,
-        'selected_batch': batch_id,
-        'search': search,
+        # Pre-fill batch if passed via query string
+        initial = {}
+        if request.GET.get('batch'):
+            initial['batch'] = request.GET.get('batch')
+        form = ClassScheduleForm(initial=initial)
+    return render(request, 'staff/schedule_form.html', {
+        'form':  form,
+        'title': 'Schedule New Class',
     })
 
 
 @login_required
-def student_create(request):
-    batch_id = request.GET.get('batch')
-    if request.method == 'POST':
-        form = StudentForm(request.POST)
-        if form.is_valid():
-            student = form.save(commit=False)
-            # Create user account
-            username = student.email.split('@')[0]
-            password = form.cleaned_data.get('password') or User.objects.make_random_password()
-            user = User.objects.create_user(
-                username=username,
-                email=student.email,
-                password=password,
-                first_name=student.first_name,
-                last_name=student.last_name,
-            )
-            student.user = user
-            student.save()
-            messages.success(request, f'Student "{student.get_full_name()}" added! Login: {username}')
-            return redirect('staff:student_list')
-    else:
-        initial = {}
-        if batch_id:
-            initial['batch'] = batch_id
-        form = StudentForm(initial=initial)
-    return render(request, 'staff/student_form.html', {'form': form, 'title': 'Add Student'})
+def schedule_detail(request, pk):
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+    schedule = get_object_or_404(ClassSchedule, pk=pk)
+    return render(request, 'staff/schedule_detail.html', {'schedule': schedule})
 
 
 @login_required
-def student_detail(request, pk):
-    student = get_object_or_404(Student, pk=pk)
-    return render(request, 'staff/student_detail.html', {'student': student})
-
-
-@login_required
-def student_edit(request, pk):
-    student = get_object_or_404(Student, pk=pk)
+def schedule_edit(request, pk):
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+    schedule = get_object_or_404(ClassSchedule, pk=pk)
     if request.method == 'POST':
-        form = StudentForm(request.POST, instance=student)
+        form = ClassScheduleForm(request.POST, instance=schedule)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Student updated successfully!')
-            return redirect('staff:student_list')
+            messages.success(request, 'Schedule updated successfully!')
+            return redirect('staff:schedule_list')
     else:
-        form = StudentForm(instance=student)
-    return render(request, 'staff/student_form.html', {'form': form, 'title': 'Edit Student'})
+        form = ClassScheduleForm(instance=schedule)
+    return render(request, 'staff/schedule_form.html', {
+        'form':     form,
+        'title':    'Edit Class Schedule',
+        'schedule': schedule,
+    })
 
 
 @login_required
-def student_toggle(request, pk):
-    student = get_object_or_404(Student, pk=pk)
-    student.is_active = not student.is_active
-    student.save()
-    status = 'activated' if student.is_active else 'deactivated'
-    messages.success(request, f'Student {status} successfully!')
-    return redirect('staff:student_list')
+def schedule_delete(request, pk):
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+    schedule = get_object_or_404(ClassSchedule, pk=pk)
+    if request.method == 'POST':
+        title = schedule.title
+        schedule.delete()
+        messages.success(request, f'Schedule "{title}" deleted.')
+        return redirect('staff:schedule_list')
+    return render(request, 'staff/schedule_confirm_delete.html', {'schedule': schedule})
 
 
 @login_required
-def batch_students(request, pk):
-    batch = get_object_or_404(Batch, pk=pk)
-    students = Student.objects.filter(batch=batch).order_by('first_name')
-    return render(request, 'staff/batch_students.html', {'batch': batch, 'students': students})
+def schedule_status_update(request, pk):
+    """Quick status change via POST."""
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+    schedule = get_object_or_404(ClassSchedule, pk=pk)
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        valid = [s[0] for s in ClassSchedule.STATUS_CHOICES]
+        if new_status in valid:
+            schedule.status = new_status
+            schedule.save()
+            messages.success(request, f'Status updated to "{schedule.get_status_display()}".')
+    return redirect('staff:schedule_list')
+
+
+@login_required
+def schedule_timetable(request):
+    """Weekly timetable view grouped by batch."""
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+
+    batch_id = request.GET.get('batch', '')
+    batches  = Batch.objects.filter(is_active=True)
+
+    schedules = ClassSchedule.objects.select_related('batch').filter(
+        status__in=['scheduled', 'ongoing']
+    )
+    if batch_id:
+        schedules = schedules.filter(batch_id=batch_id)
+
+    DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    timetable = {day: [] for day in DAYS}
+    for s in schedules:
+        if s.day in timetable:
+            timetable[s.day].append(s)
+
+    return render(request, 'staff/schedule_timetable.html', {
+        'timetable': timetable,
+        'days':      DAYS,
+        'batches':   batches,
+        'batch_id':  batch_id,
+    })
