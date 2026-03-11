@@ -49,8 +49,6 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#1e293b
     <div class="links" style="margin-top:14px">
         {% if role == 'Staff' %}
             <a href="{% url 'staff:register' %}">Register as Staff</a>
-            <span style="margin:0 8px">•</span>
-            <a href="{% url 'staff:student_login' %}">Student Login</a>
         {% else %}
             <a href="{% url 'staff:login' %}">← Staff Login</a>
         {% endif %}

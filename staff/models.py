@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+
 class StaffProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staff_profile')
     employee_id = models.CharField(max_length=20, unique=True)
@@ -27,6 +28,74 @@ class Batch(models.Model):
 
     def student_count(self):
         return self.students.count()
+    
+# ─── CLASS TIME SCHEDULING ────────────────────────────────────────────────────
+
+class ClassSchedule(models.Model):
+    DAY_CHOICES = [
+        ('Monday',    'Monday'),
+        ('Tuesday',   'Tuesday'),
+        ('Wednesday', 'Wednesday'),
+        ('Thursday',  'Thursday'),
+        ('Friday',    'Friday'),
+        ('Saturday',  'Saturday'),
+        ('Sunday',    'Sunday'),
+    ]
+
+    STATUS_CHOICES = [
+        ('scheduled',  'Scheduled'),
+        ('ongoing',    'Ongoing'),
+        ('completed',  'Completed'),
+        ('cancelled',  'Cancelled'),
+    ]
+
+    SUBJECT_CHOICES = [
+        ('reading',   'Reading'),
+        ('writing',   'Writing'),
+        ('listening', 'Listening'),
+        ('speaking',  'Speaking'),
+        ('general',   'General English'),
+    ]
+
+    title       = models.CharField(max_length=200)
+    batch       = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name='class_schedules')
+    subject     = models.CharField(max_length=20, choices=SUBJECT_CHOICES, default='general')
+    date        = models.DateField()
+    day         = models.CharField(max_length=10, choices=DAY_CHOICES, blank=True)
+    start_time  = models.TimeField()
+    end_time    = models.TimeField()
+    venue       = models.CharField(max_length=100, blank=True)
+    notes       = models.TextField(blank=True)
+    status      = models.CharField(max_length=15, choices=STATUS_CHOICES, default='scheduled')
+    created_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['date', 'start_time']
+
+    def __str__(self):
+        return f"{self.title} – {self.batch.name} ({self.date})"
+
+    def duration_display(self):
+        from datetime import datetime, date
+        start = datetime.combine(date.today(), self.start_time)
+        end   = datetime.combine(date.today(), self.end_time)
+        diff  = end - start
+        mins  = int(diff.total_seconds() / 60)
+        h, m  = divmod(mins, 60)
+        return f"{h}h {m}m" if h else f"{m}m"
+
+    def clean(self):
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValidationError("End time must be after start time.")
+
+    def save(self, *args, **kwargs):
+        # Auto-fill day of week from date
+        if self.date:
+            self.day = self.date.strftime('%A')
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Student(models.Model):

@@ -10,6 +10,8 @@ urlpatterns = [
     path('register/', views.staff_register, name='register'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('student-portal/', views.student_portal, name='student_portal'),
+    
+    
 
     # Batch URLs
     path('batches/', views.batch_list, name='batch_list'),
@@ -23,4 +25,15 @@ urlpatterns = [
     path('students/<int:pk>/', views.student_detail, name='student_detail'),
     path('students/<int:pk>/edit/', views.student_edit, name='student_edit'),
     path('students/<int:pk>/toggle/', views.student_toggle, name='student_toggle'),
+
+    # ── Class Time Scheduling ─────────────────────────────────────────────────────
+    path('schedules/',                   views.schedule_list,          name='schedule_list'),
+    # path('schedules/create/',            views.schedule_create,        name='schedule_create'),
+    # path('schedules/timetable/',         views.schedule_timetable,     name='schedule_timetable'),
+    # path('schedules/<int:pk>/',          views.schedule_detail,        name='schedule_detail'),
+    # path('schedules/<int:pk>/edit/',     views.schedule_edit,          name='schedule_edit'),
+    # path('schedules/<int:pk>/delete/',   views.schedule_delete,        name='schedule_delete'),
+    # path('schedules/<int:pk>/status/',   views.schedule_status_update, name='schedule_status_update'),
+
+
 ]

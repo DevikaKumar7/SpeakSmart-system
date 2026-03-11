@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import StaffProfile, Student, Batch
+from .models import StaffProfile, Student, Batch, ClassSchedule
 
 
 class StaffRegistrationForm(UserCreationForm):
@@ -54,3 +54,31 @@ class BatchForm(forms.ModelForm):
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
+
+# ─── CLASS TIME SCHEDULE FORM ─────────────────────────────────────────────────
+
+class ClassScheduleForm(forms.ModelForm):
+
+    class Meta:
+        model  = ClassSchedule
+        fields = [
+            'title', 'batch', 'subject',
+            'date', 'start_time', 'end_time',
+            'venue', 'notes', 'status',
+        ]
+        widgets = {
+            'date':       forms.DateInput(attrs={'type': 'date'}),
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time':   forms.TimeInput(attrs={'type': 'time'}),
+            'notes':      forms.Textarea(attrs={'rows': 3, 'placeholder': 'Any additional notes…'}),
+            'venue':      forms.TextInput(attrs={'placeholder': 'e.g. Room 101, Online – Zoom'}),
+            'title':      forms.TextInput(attrs={'placeholder': 'e.g. Speaking Practice – Week 3'}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        start = cleaned.get('start_time')
+        end   = cleaned.get('end_time')
+        if start and end and end <= start:
+            raise forms.ValidationError("End time must be after start time.")
+        return cleaned        
