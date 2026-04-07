@@ -23,9 +23,12 @@ urlpatterns = [
     # ── Student ──────────────────────────────────────────────────────────────
     path('students/',                      views.student_list,   name='student_list'),
     path('students/create/',               views.student_create, name='student_create'),
+    path('students/bulk-import/',    views.student_bulk_import,   name='student_bulk_import'),
+    path('students/csv-template/',   views.student_csv_template,  name='student_csv_template'),
     path('students/<int:pk>/',             views.student_detail, name='student_detail'),
     path('students/<int:pk>/edit/',        views.student_edit,   name='student_edit'),
     path('students/<int:pk>/toggle/',      views.student_toggle, name='student_toggle'),
+    
 
     # ── Class Time Scheduling ─────────────────────────────────────────────────
     path('schedules/',                            views.schedule_list,          name='schedule_list'),

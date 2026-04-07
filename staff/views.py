@@ -5,6 +5,11 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.db.models import Q
 from datetime import date
+import csv
+import io
+import secrets
+import string
+from django.http import HttpResponse
 
 from .models import StaffProfile, Student, Batch, ClassSchedule
 from .forms import StaffRegistrationForm, StudentForm, BatchForm, ClassScheduleForm
@@ -55,6 +60,203 @@ def staff_register(request):
     else:
         form = StaffRegistrationForm()
     return render(request, 'staff/register.html', {'form': form})
+
+
+# ─── ADD THESE TWO VIEWS anywhere in staff/views.py ──────────────────────────
+ 
+@login_required
+def student_bulk_import(request):
+    """Import multiple students from a CSV file."""
+    if not request.user.is_staff:
+        return redirect('staff:student_portal')
+ 
+    batches = Batch.objects.filter(is_active=True)
+    results = None
+ 
+    if request.method == 'POST':
+        csv_file      = request.FILES.get('csv_file')
+        default_batch_id = request.POST.get('default_batch')
+        skip_dupes    = 'skip_duplicates' in request.POST
+        auto_password = 'auto_password'   in request.POST
+ 
+        if not csv_file:
+            messages.error(request, 'Please upload a CSV file.')
+            return render(request, 'staff/student_bulk_import.html', {'batches': batches})
+ 
+        if not csv_file.name.endswith('.csv'):
+            messages.error(request, 'File must be a .csv file.')
+            return render(request, 'staff/student_bulk_import.html', {'batches': batches})
+ 
+        try:
+            default_batch = Batch.objects.get(pk=default_batch_id) if default_batch_id else None
+        except Batch.DoesNotExist:
+            default_batch = None
+ 
+        # Decode file
+        try:
+            decoded = csv_file.read().decode('utf-8-sig')  # utf-8-sig handles BOM
+        except UnicodeDecodeError:
+            decoded = csv_file.read().decode('latin-1')
+ 
+        reader = csv.DictReader(io.StringIO(decoded))
+ 
+        # Normalise headers (lowercase + strip)
+        reader.fieldnames = [h.strip().lower() for h in (reader.fieldnames or [])]
+ 
+        created          = 0
+        skipped          = 0
+        errors           = []
+        skipped_details  = []
+        total            = 0
+ 
+        REQUIRED = {'student_id', 'first_name', 'last_name', 'email'}
+        missing  = REQUIRED - set(reader.fieldnames)
+        if missing:
+            messages.error(request, f'CSV is missing required columns: {", ".join(missing)}')
+            return render(request, 'staff/student_bulk_import.html', {'batches': batches})
+ 
+        for row_num, row in enumerate(reader, start=2):  # start=2 (row 1 = header)
+            total += 1
+            # Clean values
+            row = {k: (v.strip() if v else '') for k, v in row.items()}
+ 
+            student_id = row.get('student_id', '')
+            first_name = row.get('first_name', '')
+            last_name  = row.get('last_name',  '')
+            email      = row.get('email',      '')
+ 
+            # Validate required fields
+            if not all([student_id, first_name, last_name, email]):
+                errors.append({'row': row_num, 'message': f'Missing required field(s) — student_id={student_id}, email={email}'})
+                continue
+ 
+            # Basic email validation
+            if '@' not in email:
+                errors.append({'row': row_num, 'message': f'Invalid email address: {email}'})
+                continue
+ 
+            # Check duplicates
+            if skip_dupes:
+                if Student.objects.filter(student_id=student_id).exists():
+                    skipped += 1
+                    skipped_details.append(f'Row {row_num}: student_id "{student_id}" already exists')
+                    continue
+                if Student.objects.filter(email=email).exists():
+                    skipped += 1
+                    skipped_details.append(f'Row {row_num}: email "{email}" already exists')
+                    continue
+                if User.objects.filter(email=email).exists():
+                    skipped += 1
+                    skipped_details.append(f'Row {row_num}: user with email "{email}" already exists')
+                    continue
+ 
+            # Resolve batch
+            batch = default_batch
+            batch_name = row.get('batch', '').strip()
+            if batch_name:
+                resolved = Batch.objects.filter(name__iexact=batch_name).first()
+                if resolved:
+                    batch = resolved
+ 
+            # Gender
+            gender = row.get('gender', '').upper()
+            if gender not in ('M', 'F', 'O'):
+                gender = ''
+ 
+            # Date of birth
+            from datetime import datetime
+            dob = None
+            dob_str = row.get('date_of_birth', '')
+            if dob_str:
+                for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%m/%d/%Y'):
+                    try:
+                        dob = datetime.strptime(dob_str, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+ 
+            # Password
+            password = row.get('password', '').strip()
+            if not password or auto_password:
+                alphabet = string.ascii_letters + string.digits + '!@#$'
+                password = ''.join(secrets.choice(alphabet) for _ in range(12))
+ 
+            # Username = email prefix
+            username = email.split('@')[0]
+            # Ensure unique username
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+ 
+            try:
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                )
+                Student.objects.create(
+                    user=user,
+                    student_id=student_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    email=email,
+                    phone=row.get('phone', ''),
+                    gender=gender,
+                    date_of_birth=dob,
+                    batch=batch,
+                )
+                created += 1
+            except Exception as e:
+                # Rollback user if student creation failed
+                try:
+                    User.objects.filter(username=username).delete()
+                except Exception:
+                    pass
+                errors.append({'row': row_num, 'message': str(e)})
+ 
+        results = {
+            'created':         created,
+            'skipped':         skipped,
+            'errors':          errors,
+            'skipped_details': skipped_details,
+            'total':           total,
+        }
+ 
+        if created:
+            messages.success(request, f'✅ {created} student(s) imported successfully!')
+        if skipped:
+            messages.warning(request, f'⚠️ {skipped} row(s) skipped (duplicates).')
+        if errors:
+            messages.error(request, f'❌ {len(errors)} row(s) had errors.')
+ 
+    return render(request, 'staff/student_bulk_import.html', {
+        'batches': batches,
+        'results': results,
+    })
+ 
+ 
+@login_required
+def student_csv_template(request):
+    """Download a blank CSV template for bulk student import."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="students_import_template.csv"'
+ 
+    writer = csv.writer(response)
+    # Header row
+    writer.writerow([
+        'student_id', 'first_name', 'last_name', 'email',
+        'phone', 'gender', 'date_of_birth', 'batch', 'password'
+    ])
+    # Sample rows
+    writer.writerow(['STU001', 'John',  'Smith', 'john@example.com',  '9876543210', 'M', '2000-06-15', 'Batch A', ''])
+    writer.writerow(['STU002', 'Jane',  'Doe',   'jane@example.com',  '9123456789', 'F', '2001-03-22', 'Batch B', ''])
+    writer.writerow(['STU003', 'Alex',  'Kumar', 'alex@example.com',  '',           '',  '',           'Batch A', ''])
+ 
+    return response
 
 
 # ─── STAFF DASHBOARD ──────────────────────────────────────────────────────────
@@ -166,7 +368,8 @@ def student_create(request):
         if form.is_valid():
             student  = form.save(commit=False)
             username = student.email.split('@')[0]
-            password = form.cleaned_data.get('password') or User.objects.make_random_password()
+            alphabet = string.ascii_letters + string.digits + '!@#$'
+            password = form.cleaned_data.get('password') or ''.join(secrets.choice(alphabet) for _ in range(12))
             user = User.objects.create_user(
                 username=username, email=student.email, password=password,
                 first_name=student.first_name, last_name=student.last_name,

@@ -13,6 +13,7 @@ urlpatterns = [
     path('reading/phrases/<int:pk>/edit/', views.phrase_edit, name='phrase_edit'),
     path('reading/phrases/<int:pk>/delete/', views.phrase_delete, name='phrase_delete'),
     path('reading/phrases/<int:pk>/toggle/', views.phrase_toggle, name='phrase_toggle'),
+    path('api/batch/<int:batch_id>/students/', views.batch_students_api),
 
     # ── Reading: Paragraphs ───────────────────────────────────────────────────
     path('reading/paragraphs/', views.paragraph_list, name='paragraph_list'),

@@ -1,14 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Students{% endblock %}
 {% block page_title %}Students{% endblock %}
-{% block topbar_actions %}<a href="{% url 'staff:student_create' %}" class="btn btn-primary">+ Add Student</a>{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'staff:student_bulk_import' %}" class="btn btn-secondary btn-sm">📥 Bulk Import CSV</a>
+<a href="{% url 'staff:student_create' %}" class="btn btn-primary btn-sm" style="margin-left:8px">+ Add Student</a>
+{% endblock %}
+
 {% block content %}
 <div class="search-bar">
     <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
         <input name="search" value="{{ search }}" placeholder="🔍 Search by name or ID..." style="flex:1;min-width:200px">
         <select name="batch">
             <option value="">All Batches</option>
-            {% for b in batches %}<option value="{{ b.pk }}" {% if selected_batch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+            {% for b in batches %}
+            <option value="{{ b.pk }}" {% if selected_batch == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
         </select>
         <button type="submit" class="btn btn-primary">Search</button>
         <a href="{% url 'staff:student_list' %}" class="btn btn-secondary">Clear</a>
@@ -18,10 +25,22 @@
 <div class="card">
     <div class="card-body" style="padding:0">
         <table>
-            <thead><tr><th>Student ID</th><th>Name</th><th>Batch</th><th>Email</th><th>Enrolled</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Batch</th>
+                    <th>Email</th>
+                    <th>Enrolled</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
             <tbody>
             {% for s in students %}
             <tr>
+                <td style="color:#94a3b8;font-size:.8rem">{{ forloop.counter }}</td>
                 <td><span class="badge badge-secondary">{{ s.student_id }}</span></td>
                 <td><strong>{{ s.get_full_name }}</strong></td>
                 <td>{% if s.batch %}<span class="badge badge-primary">{{ s.batch.name }}</span>{% else %}—{% endif %}</td>
@@ -31,11 +50,22 @@
                 <td class="action-buttons">
                     <a href="{% url 'staff:student_detail' s.pk %}" class="btn btn-secondary btn-sm">👁</a>
                     <a href="{% url 'staff:student_edit' s.pk %}" class="btn btn-warning btn-sm">✏️</a>
-                    <a href="{% url 'staff:student_toggle' s.pk %}" class="btn btn-{% if s.is_active %}danger{% else %}success{% endif %} btn-sm" onclick="return confirm('Toggle student status?')">{% if s.is_active %}🚫{% else %}✅{% endif %}</a>
+                    <a href="{% url 'staff:student_toggle' s.pk %}" class="btn btn-{% if s.is_active %}danger{% else %}success{% endif %} btn-sm"
+                       onclick="return confirm('Toggle student status?')">{% if s.is_active %}🚫{% else %}✅{% endif %}</a>
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><p>No students found.<br><a href="{% url 'staff:student_create' %}">Add a student</a></p></div></td></tr>
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="icon">👥</div>
+                        <p>No students found.<br>
+                            <a href="{% url 'staff:student_create' %}">Add a student</a> or
+                            <a href="{% url 'staff:student_bulk_import' %}">import via CSV</a>
+                        </p>
+                    </div>
+                </td>
+            </tr>
             {% endfor %}
             </tbody>
         </table>

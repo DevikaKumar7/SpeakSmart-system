@@ -7,6 +7,19 @@
 <a href="{% url 'scheduling:phrase_delete' obj.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Delete permanently?')">🗑 Delete</a>
 {% endblock %}
 {% block content %}
+
+{# ── Phrase data ── #}
+<span id="phrase-data"
+  data-text="{{ obj.text|escapejs }}"
+  data-meaning="{{ obj.meaning|escapejs }}"
+  data-example="{{ obj.example_sentence|escapejs }}"
+  data-translation="{{ obj.translation|escapejs }}"
+  data-category="{{ obj.category|default:'—'|escapejs }}"
+  data-audionote="{{ obj.audio_note|default:'—'|escapejs }}"
+  data-difficulty="{{ obj.difficulty|escapejs }}"
+  data-isactive="{% if obj.is_active %}Active{% else %}Disabled{% endif %}"
+></span>
+
 <div class="card">
   <div class="card-header">
     <h3>{{ obj }}</h3>
@@ -18,16 +31,261 @@
   <div class="card-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div class="detail-field"><label>Phrase Text</label><p>{{obj.text}}</p></div>
-<div class="detail-field" style="grid-column:1/-1"><label>Meaning</label><div class="long-text">{{obj.meaning}}</div></div>
-<div class="detail-field" style="grid-column:1/-1"><label>Example Sentence</label><div class="long-text">{{obj.example_sentence}}</div></div>
-<div class="detail-field"><label>Translation</label><p>{{obj.translation}}</p></div>
-<div class="detail-field"><label>Category</label><p>{{obj.category|default:'—'}}</p></div>
-<div class="detail-field" style="grid-column:1/-1"><label>Pronunciation Tips</label><div class="long-text">{{obj.audio_note}}</div></div>
-
+      <div class="detail-field" style="grid-column:1/-1"><label>Meaning</label><div class="long-text">{{obj.meaning}}</div></div>
+      <div class="detail-field" style="grid-column:1/-1"><label>Example Sentence</label><div class="long-text">{{obj.example_sentence}}</div></div>
+      <div class="detail-field"><label>Translation</label><p>{{obj.translation}}</p></div>
+      <div class="detail-field"><label>Category</label><p>{{obj.category|default:'—'}}</p></div>
+      <div class="detail-field" style="grid-column:1/-1"><label>Pronunciation Tips</label><div class="long-text">{{obj.audio_note}}</div></div>
       <div class="detail-field"><label>Created By</label><p>{{ obj.created_by.get_full_name|default:obj.created_by.username|default:"—" }}</p></div>
       <div class="detail-field"><label>Created At</label><p>{{ obj.created_at|date:"M d, Y H:i" }}</p></div>
     </div>
   </div>
 </div>
-<a href="{% url 'scheduling:phrase_list' %}" class="btn btn-secondary">← Back to List</a>
+
+{# ── Action buttons ── #}
+<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center;">
+  <button onclick="sendWebhook(this)" class="btn btn-success btn-sm">
+    📲 Send via Webhook
+  </button>
+  <button onclick="openStudentModal()" class="btn btn-primary btn-sm">
+    🎓 Send to Student
+  </button>
+  <a href="{% url 'scheduling:phrase_list' %}" class="btn btn-secondary btn-sm">← Back to List</a>
+</div>
+<!-- 
+{# ══════════════════════════════════════════
+   SEND TO STUDENT MODAL
+══════════════════════════════════════════ #} -->
+<div id="studentModal" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.55);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+">
+  <div style="
+    background:#fff;
+    border-radius:12px;
+    padding:32px 28px;
+    width:100%;
+    max-width:460px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+    position:relative;
+    font-family:inherit;
+  ">
+    {# Close #}
+    <button onclick="closeStudentModal()" style="
+      position:absolute;top:14px;right:16px;
+      background:none;border:none;font-size:20px;
+      cursor:pointer;color:#888;line-height:1;
+    ">✕</button>
+
+    <h5 style="margin:0 0 6px;font-size:1.1rem;font-weight:700;">🎓 Send to Student</h5>
+    <p style="margin:0 0 20px;font-size:.85rem;color:#666;">
+      Select a batch, then pick a student to send this phrase.
+    </p>
+
+    {# Step 1 — Batch #}
+    <div style="margin-bottom:16px;">
+      <label style="font-size:.8rem;font-weight:600;color:#444;display:block;margin-bottom:6px;">
+        STEP 1 — SELECT BATCH
+      </label>
+      <select id="batchSelect" onchange="loadStudents()" style="
+        width:100%;padding:9px 12px;border:1.5px solid #ddd;
+        border-radius:8px;font-size:.9rem;background:#fafafa;
+        appearance:none;cursor:pointer;
+      ">
+        <option value="">— Choose a batch —</option>
+        {% for batch in batches %}
+        <option value="{{ batch.pk }}">{{ batch.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {# Step 2 — Student #}
+    <div style="margin-bottom:24px;">
+      <label style="font-size:.8rem;font-weight:600;color:#444;display:block;margin-bottom:6px;">
+        STEP 2 — SELECT STUDENT
+      </label>
+      <select id="studentSelect" disabled style="
+        width:100%;padding:9px 12px;border:1.5px solid #ddd;
+        border-radius:8px;font-size:.9rem;background:#f0f0f0;
+        appearance:none;cursor:not-allowed;
+      ">
+        <option value="">— Select batch first —</option>
+      </select>
+      <div id="studentLoader" style="display:none;font-size:.8rem;color:#888;margin-top:5px;">
+        ⏳ Loading students…
+      </div>
+    </div>
+
+    {# Send button #}
+    <button id="sendStudentBtn" onclick="sendToStudent()" disabled style="
+      width:100%;padding:11px;border:none;border-radius:8px;
+      background:#28a745;color:#fff;font-size:.95rem;font-weight:600;
+      cursor:not-allowed;opacity:.55;transition:all .2s;
+    ">
+      📩 Send to Student
+    </button>
+
+    <div id="modalStatus" style="margin-top:12px;text-align:center;font-size:.85rem;min-height:20px;"></div>
+  </div>
+</div>
+
+<style>
+  #studentModal.open { display:flex !important; }
+  #batchSelect:focus, #studentSelect:focus {
+    outline:none; border-color:#007bff; box-shadow:0 0 0 3px rgba(0,123,255,.15);
+  }
+</style>
+
+<script>
+/* ── Global broadcast webhook ── */
+function sendWebhook(btn) {
+  const d = document.getElementById('phrase-data').dataset;
+  const payload = {
+    text:        d.text,
+    meaning:     d.meaning,
+    example:     d.example,
+    translation: d.translation,
+    category:    d.category,
+    audionote:   d.audionote,
+    difficulty:  d.difficulty,
+    isactive:    d.isactive
+  };
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending…';
+  fetch("https://donanmt.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  })
+  .then(r => { if(!r.ok) throw new Error("HTTP "+r.status); btn.textContent='✅ Sent!'; })
+  .catch(() => { btn.textContent='❌ Failed'; })
+  .finally(() => setTimeout(()=>{ btn.disabled=false; btn.textContent='📲 Send via Webhook'; },2500));
+}
+
+/* ── Modal open / close ── */
+function openStudentModal() {
+  document.getElementById('studentModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeStudentModal() {
+  document.getElementById('studentModal').classList.remove('open');
+  document.body.style.overflow = '';
+  // reset
+  document.getElementById('batchSelect').value = '';
+  const ss = document.getElementById('studentSelect');
+  ss.innerHTML = '<option value="">— Select batch first —</option>';
+  ss.disabled = true; ss.style.background='#f0f0f0'; ss.style.cursor='not-allowed';
+  document.getElementById('sendStudentBtn').disabled = true;
+  document.getElementById('sendStudentBtn').style.opacity = '.55';
+  document.getElementById('sendStudentBtn').style.cursor = 'not-allowed';
+  document.getElementById('modalStatus').textContent = '';
+}
+
+/* ── Load students for chosen batch via Django API ── */
+function loadStudents() {
+  const batchId = document.getElementById('batchSelect').value;
+  const ss      = document.getElementById('studentSelect');
+  const loader  = document.getElementById('studentLoader');
+  const sendBtn = document.getElementById('sendStudentBtn');
+
+  ss.innerHTML = '<option value="">— Loading… —</option>';
+  ss.disabled = true; ss.style.background='#f0f0f0';
+  sendBtn.disabled = true; sendBtn.style.opacity='.55'; sendBtn.style.cursor='not-allowed';
+
+  if (!batchId) {
+    ss.innerHTML = '<option value="">— Select batch first —</option>';
+    return;
+  }
+
+  loader.style.display = 'block';
+
+  fetch(`/scheduling/api/batch/${batchId}/students/`)
+    .then(r => r.json())
+    .then(data => {
+      loader.style.display = 'none';
+      ss.innerHTML = '<option value="">— Choose a student —</option>';
+      if (data.students && data.students.length) {
+        data.students.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.telegram_chat_id || s.id;   // use telegram_chat_id if available
+          opt.dataset.name = s.name;
+          opt.dataset.chatId = s.telegram_chat_id || '';
+          opt.textContent = s.name;
+          ss.appendChild(opt);
+        });
+        ss.disabled = false; ss.style.background='#fafafa'; ss.style.cursor='pointer';
+        ss.onchange = () => {
+          const ready = ss.value !== '';
+          sendBtn.disabled = !ready;
+          sendBtn.style.opacity = ready ? '1' : '.55';
+          sendBtn.style.cursor  = ready ? 'pointer' : 'not-allowed';
+        };
+      } else {
+        ss.innerHTML = '<option value="">No students found in this batch</option>';
+      }
+    })
+    .catch(() => {
+      loader.style.display = 'none';
+      ss.innerHTML = '<option value="">⚠️ Failed to load students</option>';
+    });
+}
+
+/* ── Send to individual student ── */
+function sendToStudent() {
+  const ss      = document.getElementById('studentSelect');
+  const status  = document.getElementById('modalStatus');
+  const sendBtn = document.getElementById('sendStudentBtn');
+  const d       = document.getElementById('phrase-data').dataset;
+
+  const selectedOption = ss.options[ss.selectedIndex];
+  const studentName    = selectedOption.dataset.name || ss.options[ss.selectedIndex].text;
+  const chatId         = selectedOption.dataset.chatId || ss.value;
+
+  if (!chatId) { status.textContent = '⚠️ No Telegram Chat ID for this student.'; return; }
+
+  const payload = {
+    chat_id:     chatId,
+    student:     studentName,
+    text:        d.text,
+    meaning:     d.meaning,
+    example:     d.example,
+    translation: d.translation,
+    category:    d.category,
+    audionote:   d.audionote,
+    difficulty:  d.difficulty,
+    isactive:    d.isactive
+  };
+
+  sendBtn.disabled = true;
+  sendBtn.textContent = '⏳ Sending…';
+  status.textContent = '';
+
+  fetch("https://donanmt.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  })
+  .then(r => { if(!r.ok) throw new Error("HTTP "+r.status); })
+  .then(() => {
+    status.style.color = '#28a745';
+    status.textContent = `✅ Sent to ${studentName} successfully!`;
+    sendBtn.textContent = '✅ Sent!';
+    setTimeout(() => closeStudentModal(), 2000);
+  })
+  .catch(() => {
+    status.style.color = '#dc3545';
+    status.textContent = '❌ Failed to send. Please try again.';
+    sendBtn.disabled = false;
+    sendBtn.textContent = '📩 Send to Student';
+  });
+}
+
+/* Close modal on backdrop click */
+document.getElementById('studentModal').addEventListener('click', function(e) {
+  if (e.target === this) closeStudentModal();
+});
+</script>
+
 {% endblock %}

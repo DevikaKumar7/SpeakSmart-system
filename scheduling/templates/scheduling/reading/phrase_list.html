@@ -29,6 +29,9 @@
         <td><span class="badge badge-{%if item.is_active%}success{%else%}danger{%endif%}">{%if item.is_active%}Active{%else%}Disabled{%endif%}</span></td>
         <td style="color:#64748b;font-size:.8rem">{{ item.created_at|date:"M d, Y" }}</td>
         <td class="action-buttons">
+
+          
+
           <a href="{% url 'scheduling:phrase_detail' item.pk %}" class="btn btn-secondary btn-sm">👁</a>
           <a href="{% url 'scheduling:phrase_edit' item.pk %}" class="btn btn-warning btn-sm">✏️</a>
           <a href="{% url 'scheduling:phrase_toggle' item.pk %}" class="btn btn-{%if item.is_active%}warning{%else%}success{%endif%} btn-sm" onclick="return confirm('Toggle status?')">{%if item.is_active%}🚫{%else%}✅{%endif%}</a>
@@ -42,4 +45,6 @@
     </table>
   </div>
 </div>
+
+
 {% endblock %}
