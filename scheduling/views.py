@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
+from scheduling.models import Batch,Student
+from django.http import JsonResponse
 from .models import (
     Schedule, Phrase, Paragraph, Vocabulary,
     WritingPrompt, WritingExercise, GrammarRule,
@@ -473,3 +475,18 @@ def roleplay_delete(request, pk):
 @login_required
 def roleplay_toggle(request, pk):
     return _toggle(request, Roleplay, pk, 'scheduling:roleplay_list')
+
+def phrase_detail(request, pk):
+    obj = get_object_or_404(Phrase, pk=pk)
+    batches = Batch.objects.filter(is_active=True)
+    return render(request, 'scheduling/reading/phrase_detail.html', {   # ← add "scheduling/" prefix
+        'obj': obj,
+        'batches': batches
+    })
+
+
+def batch_students_api(request, batch_id):
+    students = Student.objects.filter(batch_id=batch_id).values(
+        'id', 'name', 'telegram_chat_id'  # make sure telegram_chat_id exists on your model
+    )
+    return JsonResponse({'students': list(students)})
