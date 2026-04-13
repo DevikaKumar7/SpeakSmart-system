@@ -156,7 +156,7 @@ function sendWebhook(btn) {
   };
   btn.disabled = true;
   btn.textContent = '⏳ Sending…';
-  fetch("https://donanmt.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
+  fetch("https://donanmt1.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify(payload)
   })
@@ -263,7 +263,7 @@ function sendToStudent() {
   sendBtn.textContent = '⏳ Sending…';
   status.textContent = '';
 
-  fetch("https://donanmt.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
+  fetch("https://donanmt1.app.n8n.cloud/webhook/aa804f2c-dc20-4736-8f90-4026c72ab3aa", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify(payload)
   })
